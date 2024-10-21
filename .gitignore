@@ -1,0 +1,16 @@
+# Archivos de entorno y credenciales
+.env
+
+# Carpetas y archivos temporales
+__pycache__/
+*.pyc
+
+# Archivos de logs
+logs/
+
+# Archivos de configuración de Airflow
+airflow.cfg
+unittests.cfg
+
+# Otros
+.DS_Store
