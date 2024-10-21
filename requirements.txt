@@ -1,0 +1,5 @@
+apache-airflow
+redshift_connector
+pandas
+requests
+pytest
