@@ -3,3 +3,4 @@ redshift_connector
 pandas
 requests
 pytest
+python-dotenv

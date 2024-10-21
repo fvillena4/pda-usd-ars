@@ -9,8 +9,8 @@ import json
 import logging
 import os  
 
-# from dotenv import load_dotenv
-# load_dotenv()
+from dotenv import load_dotenv
+load_dotenv()
 
 # Credenciales para Redshift obtenidas desde variables de entorno
 REDSHIFT_HOST = os.getenv('REDSHIFT_HOST')
@@ -20,11 +20,17 @@ REDSHIFT_USER = os.getenv('REDSHIFT_USER')
 REDSHIFT_PASSWORD = os.getenv('REDSHIFT_PASSWORD')
 
 # Nombres del esquema y la tabla
-SCHEMA_NAME = os.getenv('SCHEMA_NAME', '2024_facundo_villena_schema')  # Puedes establecer un valor por defecto
-TABLE_NAME = os.getenv('TABLE_NAME', 'cotizaciones_dolares')  # Puedes establecer un valor por defecto
+SCHEMA_NAME = os.getenv('SCHEMA_NAME', '2024_facundo_villena_schema')  
+TABLE_NAME = os.getenv('TABLE_NAME', 'cotizaciones_dolares')  
 
 # Conexión con Redshift
 def get_redshift_connection():
+    """
+    Establece una conexión a la base de datos de Amazon Redshift.
+
+    Returns:
+        conn: Conexión a la base de datos Redshift.
+    """
     conn = redshift_connector.connect(
         host=REDSHIFT_HOST,
         port=REDSHIFT_PORT,
@@ -35,7 +41,16 @@ def get_redshift_connection():
     return conn
 
 def table_exists(conn, table_name):
-    """Función para verificar si la tabla existe en Redshift"""
+    """
+    Verifica si una tabla existe en el esquema de Redshift especificado.
+
+    Args:
+        conn: Conexión a Redshift.
+        table_name (str): Nombre de la tabla a verificar.
+
+    Returns:
+        bool: True si la tabla existe, False sino.
+    """
     query = f"""
     SELECT COUNT(*)
     FROM information_schema.tables
@@ -48,7 +63,15 @@ def table_exists(conn, table_name):
     return result[0] > 0
 
 def get_last_date(conn):
-    """Función para obtener la última fecha registrada en Redshift"""
+    """
+    Obtiene la última fecha en la tabla.
+
+    Args:
+        conn: Conexión a Redshift.
+
+    Returns:
+        datetime or None: La última fecha registrada o None si no hay registros.
+    """
     full_table_name = f'"{SCHEMA_NAME}"."{TABLE_NAME}"'  
     query = f"SELECT MAX(updated_at) FROM {full_table_name};"
     cursor = conn.cursor()
@@ -69,7 +92,13 @@ TYPE_ID_MAPPING = {
 }
 
 def extract_data(**kwargs):
-    """Extraer datos desde la API"""
+    """
+    Extrae los datos de la API de cotizaciones
+    Args:
+        kwargs: Argumentos proporcionados por Airflow
+    Raises:
+        Exception: Si la API falla.
+    """
     conn = get_redshift_connection()
     
     # Verificar si la tabla existe
@@ -102,7 +131,12 @@ def extract_data(**kwargs):
         raise Exception(f"Error en la conexión a la API. Código de estado: {response.status_code}")
 
 def transform_data(**kwargs):
-    """Transforma los datos renombrándolos y haciendo cálculos entre los precios."""
+    """
+    Transforma los datos extraídos, incluyendo renombrado de columnas y cálculos.
+
+    Args:
+        kwargs: Argumentos proporcionados por Airflow
+    """
     ti = kwargs['ti']
     raw_data = ti.xcom_pull(key='raw_data', task_ids='extract_data')
     df = pd.DataFrame.from_dict(raw_data)
@@ -129,7 +163,15 @@ def transform_data(**kwargs):
     logging.info("Datos transformados y almacenados en XCom.")
 
 def load_data(**kwargs):
-    """Carga de la data en Redshift según el método si es incremental o histórica"""
+    """
+    Carga los datos transformados en  Redshift.
+
+    Args:
+        kwargs: Argumentos de Airflow
+
+    Raises:
+        Exception: Si ocurre un error durante la carga de los datos.
+    """
     ti = kwargs['ti']
     transformed_data = ti.xcom_pull(key='transformed_data', task_ids='transform_data')
     df = pd.DataFrame.from_dict(transformed_data)
