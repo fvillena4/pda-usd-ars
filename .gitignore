@@ -1,5 +1,5 @@
 # Archivos de entorno y credenciales
-.env
+#.env
 
 # Carpetas y archivos temporales
 __pycache__/
